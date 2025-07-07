@@ -6,6 +6,7 @@ This repository contains a simple Python script for screening stocks using data 
 - Python 3.8+
 - `requests` library
 - A Financial Modeling Prep API key. Set it in the environment variable `FMP_API_KEY`.
+  The default "demo" key has limited access and will fail for S&P 500 screening.
 
 Install dependencies:
 ```bash

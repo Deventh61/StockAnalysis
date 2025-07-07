@@ -6,6 +6,11 @@ from typing import List, Dict, Any
 BASE_URL = "https://financialmodelingprep.com/api/v3"
 API_KEY = os.getenv("FMP_API_KEY", "demo")
 
+if API_KEY == "demo":
+    print(
+        "Warning: Using demo API key. Some endpoints, including S&P 500 screening, require a personal API key."
+    )
+
 COMPETENCE_SECTORS = {
     "Consumer Staples",
     "Financial Services",
@@ -17,7 +22,14 @@ def _get_json(path: str, **params) -> Any:
     params["apikey"] = API_KEY
     url = f"{BASE_URL}{path}"
     resp = requests.get(url, params=params, timeout=30)
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except requests.HTTPError as err:
+        if resp.status_code == 401:
+            raise RuntimeError(
+                "Unauthorized: set your Financial Modeling Prep API key via FMP_API_KEY"
+            ) from err
+        raise
     return resp.json()
 
 
