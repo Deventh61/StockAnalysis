@@ -18,3 +18,8 @@ Run the analysis for one or more tickers by providing the symbols as arguments:
 python stock_analysis.py AAPL MSFT
 ```
 If no tickers are provided, the script defaults to `AAPL`.
+
+To screen all S&P 500 companies and list those meeting all criteria:
+```bash
+python stock_analysis.py --sp500
+```

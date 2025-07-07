@@ -68,6 +68,12 @@ def get_dividends(ticker: str, limit: int = 10) -> List[Dict[str, Any]]:
     return data.get("historical", [])
 
 
+def get_sp500_tickers() -> List[str]:
+    """Return a list of S&P 500 tickers from FMP."""
+    data = _get_json("/sp500_constituent")
+    return [d.get("symbol") for d in data]
+
+
 def circle_of_competence(profile: Dict[str, Any]) -> bool:
     return profile.get("sector") in COMPETENCE_SECTORS
 
@@ -182,14 +188,57 @@ def analyze_ticker(ticker: str) -> Dict[str, Any]:
     return results
 
 
-if __name__ == "__main__":
-    import sys
-    tickers = sys.argv[1:] or ["AAPL"]
+def meets_all_criteria(results: Dict[str, Any]) -> bool:
+    """Return True if the result dict satisfies all screening checks."""
+    if not results["circle_of_competence"]:
+        return False
+    if not results["durable_moat"]:
+        return False
+    if not results["owner_earnings_yield"]:
+        return False
+    ep = results.get("earnings_predictability", {})
+    if not ep.get("eps_growth") or not ep.get("eps_cv"):
+        return False
+    mgmt = results.get("management_alignment", {})
+    if not mgmt.get("insider_ownership") or not mgmt.get("net_insider_buying"):
+        return False
+    if not results["margin_of_safety"]:
+        return False
+    lt = results.get("long_term_orientation", {})
+    if not lt.get("shares_stable") or not lt.get("dividend_growth"):
+        return False
+    return True
+
+
+def screen_sp500() -> List[str]:
+    """Run the analysis for all S&P 500 tickers and return the ones that pass."""
+    tickers = get_sp500_tickers()
+    passing = []
     for symbol in tickers:
         try:
-            analysis = analyze_ticker(symbol)
-            print(f"Results for {symbol}:")
-            for key, value in analysis.items():
-                print(f"  {key}: {value}")
-        except Exception as exc:
-            print(f"Failed to analyze {symbol}: {exc}")
+            res = analyze_ticker(symbol)
+            if meets_all_criteria(res):
+                passing.append(symbol)
+        except Exception:
+            # Skip tickers that fail API requests or parsing
+            continue
+    return passing
+
+
+if __name__ == "__main__":
+    import sys
+    if "--sp500" in sys.argv:
+        tickers = screen_sp500()
+        print("Stocks meeting all criteria:")
+        for t in tickers:
+            print(t)
+    else:
+        tickers = [t for t in sys.argv[1:] if not t.startswith("-")] or ["AAPL"]
+        for symbol in tickers:
+            try:
+                analysis = analyze_ticker(symbol)
+                print(f"Results for {symbol}:")
+                for key, value in analysis.items():
+                    print(f"  {key}: {value}")
+            except Exception as exc:
+                print(f"Failed to analyze {symbol}: {exc}")
